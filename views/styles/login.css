@@ -1,0 +1,14 @@
+.authForm {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 20px;
+    width: 400px;
+    height: 500px;
+    background: #d69999;
+    margin-top: 200px;
+}
+
+input {
+    width: 80%;
+}
