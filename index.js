@@ -16,7 +16,6 @@ const Chat = require('./models/Chat');
 const Admin = require('./models/Admin');
 const City = require('./models/City');
 const Message = require('./models/Message');
-const { error } = require('console');
 
 const app = express();
 const server = createServer(app);
@@ -31,6 +30,11 @@ app.use(express.json());
 
 const start = async () => {
     try {
+        const dir = ['./public', './public/chats', './public/users'];
+        for(let i = 0; i < dir.length; i++) {
+            if(!fs.existsSync(dir[i])) fs.mkdirSync(dir[i]);
+        }
+
         await mongoose.connect(process.env.URL_DB);
         server.listen(process.env.PORT, () => console.log(`server started on port ${process.env.PORT}`));
     }
@@ -46,13 +50,15 @@ app.get('/check_server', (req, res) => {
 })
 
 app.get('/', async (req, res) => {
+    const {  } = req.query;
+
     let users = await User.find({}, { password: 0, wish: 0, requests: 0, like: 0 });
 
     for(let i = 0; i < users.length; i++) {
         users[i] = { ...users[i]._doc, buttonText: users[i].status == 'Заблокирован' ? 'Разблокировать' : 'Заблокировать' };
     }
 
-    res.render('main.hbs', { users })
+    res.render('main.hbs', { users });
 })
 
 app.get('/login_adm', async (req, res) => res.render('login.hbs', {}));
