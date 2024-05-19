@@ -21,11 +21,10 @@ const app = express();
 const server = createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 
-app.set('view engine', 'hbs');
 app.use(cors({ origin: '*' }));
 app.use(bodyParser.json({ limit: '100mb' }));
 app.use(express.static('public'));
-app.use(express.static('views'));
+app.use(express.static('./client/build'));
 app.use(express.json());
 
 const start = async () => {
@@ -49,20 +48,7 @@ app.get('/check_server', (req, res) => {
     res.send(true);
 })
 
-app.get('/', async (req, res) => {
-    const {  } = req.query;
-
-    let users = await User.find({}, { password: 0, wish: 0, requests: 0, like: 0 });
-
-    for(let i = 0; i < users.length; i++) {
-        users[i] = { ...users[i]._doc, buttonText: users[i].status == 'Заблокирован' ? 'Разблокировать' : 'Заблокировать' };
-    }
-
-    res.render('main.hbs', { users });
-})
-
-app.get('/login_adm', async (req, res) => res.render('login.hbs', {}));
-app.get('/reg_adm', async (req, res) => res.render('registration.hbs', {}));
+app.get('/', (req, res) => res.sendFile(__dirname + '/client/build/index.html'));
 
 app.post('/admin_auth', async (req, res) => {
     try {
@@ -70,13 +56,12 @@ app.post('/admin_auth', async (req, res) => {
 
         const decodedData = jwt.verify(token, process.env.SECRET_KEY);
         const admin = await Admin.findOne({ _id: decodedData.id }, { password: 0 });
-        if(admin == null) return res.json(false);
+        if(admin == null) return res.json({ auth: false });
 
-        if(admin) return res.json(admin.login);
-        else return res.json(false);
+        res.json(admin);
     }
     catch(e) {
-        res.json(false);
+        res.json({ auth: false });
     }
 })
 

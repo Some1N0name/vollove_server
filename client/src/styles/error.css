@@ -1,0 +1,20 @@
+.error_wrapper {
+    position: fixed;
+    z-index: 3000;
+    top: 20px;
+    left: 20px;
+    padding: 10px;
+    border-radius: 5px;
+    max-width: 400px;
+    word-wrap: break-word;
+    background: #AE3E42;
+    color: white;
+    animation: show 10s forwards;
+}
+
+@keyframes show {
+    from { opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    to { opacity: 0; }
+}

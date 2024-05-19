@@ -11,7 +11,7 @@ const User = new Schema({
     wish: { age: Number, sex: String },
     status: String,
     requests: [Schema.Types.ObjectId],
-    complaint: Number,
+    complaint: { type: Number, default: 0 },
     like: [Schema.Types.ObjectId]
 }, { versionKey: false })
 
