@@ -17,6 +17,8 @@
     padding-top: 100px;
     display: flex;
     justify-content: center;
+    height: 100vh;
+    overflow-y: scroll;
 }
 
 .main_header {
@@ -52,6 +54,7 @@
 
 .main_table {
     width: min-content;
+    height: min-content;
     margin: 0 10px;
     border-radius: 5px;
     box-shadow: 0 0 5px 5px rgba(0, 0, 0, 0.2);
@@ -127,19 +130,4 @@
 @keyframes anim {
     from { opacity: 1; }
     to { opacity: 0; }
-}
-
-.main_table::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
-}
-
-.main_table::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0);
-}
-  
-.main_table::-webkit-scrollbar-thumb {
-    background-color: rgba(148, 154, 175, 0.4);
-    border-radius: 20px;
-    border: none;
 }

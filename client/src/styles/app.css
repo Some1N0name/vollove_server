@@ -23,3 +23,18 @@
     background: linear-gradient(40deg, #AE3E74, #4B0082);
     overflow: hidden;
 }
+
+::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+}
+
+::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0);
+}
+  
+::-webkit-scrollbar-thumb {
+    background-color: rgba(148, 154, 175, 0.4);
+    border-radius: 20px;
+    border: none;
+}
