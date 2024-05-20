@@ -12,7 +12,8 @@ const User = new Schema({
     status: String,
     requests: [Schema.Types.ObjectId],
     complaint: { type: Number, default: 0 },
-    like: [Schema.Types.ObjectId]
+    like: [Schema.Types.ObjectId],
+    avatar: String
 }, { versionKey: false })
 
 module.exports = model('User', User);
