@@ -48,7 +48,7 @@ app.get('/check_server', (req, res) => {
     res.send(true);
 })
 
-app.get('/', (req, res) => res.sendFile(__dirname + '/client/build/index.html'));
+app.get('*', (req, res) => res.sendFile(__dirname + '/client/build/index.html'));
 
 app.post('/admin_auth', async (req, res) => {
     try {

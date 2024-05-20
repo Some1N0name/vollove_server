@@ -1,4 +1,4 @@
-const { useState } = require('react');
+const { useState, useEffect } = require('react');
 const { useNavigate, Link } = require('react-router-dom');
 const { server } = require('../server');
 
@@ -8,10 +8,22 @@ export default function Registration(props) {
     const { setError } = props;
     const navigate = useNavigate();
 
+    const [admin, setAdmin] = useState();
     const [login, setLogin] = useState('');
     const [password, setPassword] = useState('');
     const [repeatPassword, setRepeatPassword] = useState('');
     const [errorText, setErrorText] = useState('');
+
+    useEffect(() => {
+        server('/admin_auth', { token: localStorage.getItem('token') })
+        .then(result => setAdmin({ auth: true, ...result }))
+        .catch(e => setError([true, 'Ошибка при авторизации. Попробуйте позже']))
+    }, [])
+
+    useEffect(() => {
+        if(admin == undefined) return;
+        if(!admin.auth) navigate('/login');
+    }, [admin])
 
     function reg() {
         server('/admin_reg', { login, password, repeatPassword })
