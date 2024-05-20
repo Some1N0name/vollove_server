@@ -205,11 +205,11 @@ app.post('/token_check', async (req, res) => {
 
 app.post('/change_acc', async (req, res) => {
     try {
-        const { id, Email, Name, Csex, dateBirth } = req.body;
+        const { id, Name, Csex, dateBirth } = req.body;
 
         if(Name.trim() == '') return res.json('Имя не должно быть пустым')
 
-        await User.updateOne({email: Email}, {$set: {name: Name, dateBirth: dateBirth, sex: Csex}});
+        await User.updateOne({ _id: id }, {$set: {name: Name, dateBirth: dateBirth, sex: Csex}});
         const user = await User.findOne({ _id: id }, { password: 0, lastActive: 0 });
 
         res.json({ error: false, user });
