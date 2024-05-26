@@ -290,6 +290,11 @@ app.post('/getPhoto', async (req,res) =>{
     res.json({error:false, photo: photos})
 })
 
+app.post('/complain', async (req,res) =>{
+    const {id} = req.body
+    await User.updateOne({ _id: id }, {$inc: {complaint: 1}});
+})
+
 io.on('connection', socket => {
     console.log('connect', socket.id)
 
@@ -336,14 +341,25 @@ io.on('connection', socket => {
         const chat = new Chat({contact:[myID,userID]})
         await User.updateOne({_id: myID}, {$pull: {requests:userID}}, {$push:{like:userID}})
         await User.updateOne({_id: userID}, {$push:{like:myID}})
+        fs.mkdirSync(`./public/chats/${chat._id}`)
         await chat.save();
         socket.join(chat._id.toString());
         socket.emit('accept', { chat: await formChat(chat, myID), user: userID });
     })
 
-    socket.on('sendMessage', async ({ text, chat, user }) => {
-        const message = new Message({ text, chat, user, created: new Date() });
+    socket.on('sendMessage', async ({ text, chat, user, type }) => {
+        let message;
+        if(type == "text"){
+        message = new Message({ text, chat, user, created: new Date(), type: type });
         await message.save();
+        }
+        if(type == "photo"){
+            const name = str_rand(10);
+            let buff = new Buffer.from(text, 'base64').toString('binary');
+            fs.writeFileSync(`./public/chats/${chat}/${name}.png`, buff, 'binary');
+            message = new Message({ text: name, chat: chat, created: new Date(), type: type, user})
+            await message.save();
+        }
         io.to(chat).emit('getMessage', message);
     })
 })

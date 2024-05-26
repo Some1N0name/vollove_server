@@ -5,7 +5,8 @@ const Message = new Schema({
     chat: Schema.Types.ObjectId,
     user: Schema.Types.ObjectId,
     created: Date,
-    edit: Boolean
+    edit: Boolean,
+    type: String
 }, { versionKey: false })
 
 module.exports = model('Message', Message);
