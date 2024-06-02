@@ -24,7 +24,7 @@ export default function Main(props) {
         if(admin == undefined) return;
         if(!admin.auth) navigate('/login');
 
-        server('/getUsers')
+        server('/getAllUsers')
         .then(result => {
             setDefaultUsers(result);
             setUsers(result);

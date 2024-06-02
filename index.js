@@ -134,6 +134,11 @@ app.post('/deleteUser', async (req, res) => {
     res.json(true);
 })
 
+app.post('/getAllUsers', async (req, res) => {
+    const users = await User.find({}, { password: 0 });
+    res.json(users);
+})
+
 app.post('/registration', async (req, res) => {
     try {
         const { Name, Csex, Email, password, ppassword, date } = req.body;
