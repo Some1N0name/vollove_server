@@ -16,6 +16,7 @@ const Chat = require('./models/Chat');
 const Admin = require('./models/Admin');
 const City = require('./models/City');
 const Message = require('./models/Message');
+const { error } = require('console');
 
 const app = express();
 const server = createServer(app);
@@ -205,11 +206,11 @@ app.post('/token_check', async (req, res) => {
 
 app.post('/change_acc', async (req, res) => {
     try {
-        const { id, Name, Csex, dateBirth } = req.body;
+        const { id, Name, Csex, dateBirth, aboutMe } = req.body;
 
         if(Name.trim() == '') return res.json('Имя не должно быть пустым')
 
-        await User.updateOne({ _id: id }, {$set: {name: Name, dateBirth: dateBirth, sex: Csex}});
+        await User.updateOne({ _id: id }, {$set: {name: Name, dateBirth: dateBirth, sex: Csex, aboutMe: aboutMe}});
         const user = await User.findOne({ _id: id }, { password: 0, lastActive: 0 });
 
         res.json({ error: false, user });
@@ -227,10 +228,19 @@ const generateAccessToken = (id) => {
 
 app.post('/getUsers', async (req, res) => {
     const { id } = req.body;
+    const user = await User.findOne({_id: id}, { password: 0 });
 
-    const users = await User.find({_id: {$ne: id}, requests: {$ne: id}, like: {$ne: id}}, { password: 0 });
-
-    res.json(users);
+    if(user?.city != undefined) {
+        const first = await User.find({_id: {$ne: id}, requests: {$ne: id}, like: {$ne: id}, sex:{$ne: user.sex}, city: user.city }, { password: 0 });
+        const second = await User.find({_id: {$ne: id}, requests: {$ne: id}, like: {$ne: id}, sex:{$ne: user.sex}, city: {$ne: user.city} }, { password: 0 });
+        
+        const users = [...first, ...second];
+        return res.json(users);
+    }
+    else {
+        const allUsers = await User.find({_id: {$ne: id}, requests: {$ne: id}, like: {$ne: id}, sex:{$ne: user.sex}}, { password: 0 });
+        return res.json(allUsers)
+    }
 })
 
 app.post('/getMessages', async (req, res) => {
@@ -291,8 +301,20 @@ app.post('/getPhoto', async (req,res) =>{
 })
 
 app.post('/complain', async (req,res) =>{
-    const {id} = req.body
-    await User.updateOne({ _id: id }, {$inc: {complaint: 1}});
+    const {myId, complainUser} = req.body
+    const repeatComplain = await User.findOne({_id: myId, complaintUsers: complainUser })
+    if(repeatComplain) return res.json ({error:false, repet: true})
+    await User.updateOne({ _id: myId }, {$push: {complaintUsers: complainUser}});
+    await User.updateOne({ _id: complainUser }, {$inc: {complaint: 1}});
+    res.json({error:false, repet: false})
+})
+
+app.post('/setCity', async (req, res) => {
+    const { user, city } = req.body;
+
+    await User.updateOne({ _id: user }, { $set: { city } });
+
+    res.json({ city });
 })
 
 io.on('connection', socket => {
@@ -341,6 +363,7 @@ io.on('connection', socket => {
         const chat = new Chat({contact:[myID,userID]})
         await User.updateOne({_id: myID}, {$pull: {requests:userID}}, {$push:{like:userID}})
         await User.updateOne({_id: userID}, {$push:{like:myID}})
+        await User.updateOne({_id: myID}, {$push:{like:userID}})
         fs.mkdirSync(`./public/chats/${chat._id}`)
         await chat.save();
         socket.join(chat._id.toString());
@@ -361,6 +384,16 @@ io.on('connection', socket => {
             await message.save();
         }
         io.to(chat).emit('getMessage', message);
+    })
+
+    socket.on('deleteMessage', async ({id,chat}) => {
+        await Message.deleteOne({_id: id})
+        io.to(chat).emit('deleteMessage', { id })
+    })
+
+    socket.on('editMessage', async ({text,id,chat}) => {
+        await Message.updateOne({_id: id}, {$set:{text}})
+        io.to(chat).emit('editMessage', { id, text })
     })
 })
 
