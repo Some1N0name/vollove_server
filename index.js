@@ -9,12 +9,12 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require("path");
 const str_rand = require('./str_rand');
+const nodemailer = require('nodemailer');
 require('dotenv').config();
 
 const User = require('./models/User');
 const Chat = require('./models/Chat');
 const Admin = require('./models/Admin');
-const City = require('./models/City');
 const Message = require('./models/Message');
 const { error } = require('console');
 
@@ -27,6 +27,14 @@ app.use(bodyParser.json({ limit: '100mb' }));
 app.use(express.static('public'));
 app.use(express.static('./client/build'));
 app.use(express.json());
+
+const transporter = nodemailer.createTransport({
+    service: 'yandex',
+    auth: {
+        user: process.env.EMAIL,
+        pass: process.env.PASSWORD
+    }
+})
 
 const start = async () => {
     try {
@@ -43,6 +51,16 @@ const start = async () => {
     }
 }
 start();
+
+setInterval(() => {
+    let mailCodes = JSON.parse(fs.readFileSync('mailCodes.json'));
+    
+    for(let i = 0; i < mailCodes.length; i++) {
+        if(new Date(mailCodes[i].date) <= new Date()) mailCodes.splice(i, 1);
+    }
+
+    fs.writeFileSync('mailCodes.json', JSON.stringify(mailCodes));
+}, 3600000)
 
 app.get('/check_server', (req, res) => {
     console.log('try connect ' + req.ip);
@@ -139,23 +157,89 @@ app.post('/getAllUsers', async (req, res) => {
     res.json(users);
 })
 
-app.post('/registration', async (req, res) => {
+app.post('/startReg', async (req, res) => {
     try {
         const { Name, Csex, Email, password, ppassword, date } = req.body;
 
-        if(Name.trim() == '') return res.json('Имя пользователя не может быть пустым');
-        if(Name.length > 20) return res.json('Имя пользователя не может быть длиннее 20 символов');
-        if(password.length < 5) return res.json('Пароль должен быть длиннее 4 символов');
-        if(password.length > 20) return res.json('Пароль не может быть длиннее 20 символов');
-        if(password != ppassword) return res.json('Пароли не совпадают');
+        if(Name.trim() == '') return res.json({ error: true, message: 'Имя пользователя не может быть пустым' });
+        if(Name.length > 20) return res.json({ error: true, message: 'Имя пользователя не может быть длиннее 20 символов' });
+        if(password.length < 5) return res.json({ error: true, message: 'Пароль должен быть длиннее 4 символов' });
+        if(password.length > 20) return res.json({ error: true, message: 'Пароль не может быть длиннее 20 символов' });
+        if(password != ppassword) return res.json({ error: true, message: 'Пароли не совпадают' });
 
         const candidate = await User.findOne({email: Email});
-        if(candidate) return res.json('Пользователь с такой почтой уже существует');
+        if(candidate) return res.json({ error: true, message: 'Пользователь с такой почтой уже существует' });
+
+        const code = str_rand(6);
+
+        const html = `
+            <div style="width: 100%; display: grid;">
+                <h2>Код подтверждения электронной почты</h2>
+                <h1 style="justify-self: center;">${code}</h1>
+            </div>
+        `
+
+        await transporter.sendMail({
+            from: `VolLove <${process.env.EMAIL}@yandex.ru>`,
+            to: Email,
+            subject: 'VolLove Код подтверждения',
+            html: html
+        })
+
+        let mailCodes = JSON.parse(fs.readFileSync('mailCodes.json'));
+        const d = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate(), new Date().getHours() + 1, new Date().getMinutes(), new Date().getSeconds());
+        
+        for(let i = 0; i < mailCodes.length; i++) {
+            if(mailCodes[i].email == Email) mailCodes.splice(i, 1);
+        }
 
         const hashPassword = bcrypt.hashSync(password, 7);
+        
+        mailCodes.push({ email: Email, code, date: d, name: Name, password: hashPassword, sex: Csex, datebirth: date });
+        fs.writeFileSync('mailCodes.json', JSON.stringify(mailCodes));
+
+        res.json({ error: false });
+    }
+    catch(e) {
+        console.log(e);
+        res.json(false);
+    }
+})
+
+app.post('/registration', async (req, res) => {
+    try {
+        const { Email, code } = req.body;
+
+        let name = '', sex = '', datebirth = '', password = '';
+        let mailCodes = JSON.parse(fs.readFileSync('mailCodes.json'));
+    
+        for(let i = 0; i < mailCodes.length; i++) {
+            if(mailCodes[i].email == Email) {
+                if(new Date(mailCodes[i].date) <= new Date()) {
+                    mailCodes.splice(i, 1);
+                    return res.json({ error: true, message: 'Время действия кода истекло' });
+                }
+                else {
+                    if(mailCodes[i].code != code) return res.json({ error: true, message: 'Код неверный' });
+                    else {
+                        name = mailCodes[i].name;
+                        sex = mailCodes[i].sex;
+                        datebirth = mailCodes[i].datebirth;
+                        password = mailCodes[i].password;
+
+                        mailCodes.splice(i, 1);
+                        break;
+                    }
+                }
+            }
+
+            if(i == mailCodes.length - 1) return res.json({ error: true, message: 'Почта неверна' });
+        }
+
+        fs.writeFileSync('mailCodes.json', JSON.stringify(mailCodes));
 
         const avatar = str_rand(10);
-        const user = new User({name: Name, sex: Csex, email: Email, password: hashPassword, dateBirth: date, avatar});
+        const user = new User({name, sex, email: Email, password, dateBirth: datebirth, avatar});
 
         fs.mkdirSync("./public/users/" + user._id, { recursive: true });
         fs.mkdirSync(`./public/users/${user._id}/avatar`);
@@ -165,7 +249,7 @@ app.post('/registration', async (req, res) => {
         await user.save();
 
         const token = generateAccessToken(user._id);
-        return res.json({token});
+        return res.json({ error: false, token });
     }
     catch(e) {
         console.log(e);
@@ -320,6 +404,14 @@ app.post('/setCity', async (req, res) => {
     await User.updateOne({ _id: user }, { $set: { city } });
 
     res.json({ city });
+})
+
+app.post('/deletePhoto', async (req, res) => {
+    const { id,user } = req.body;
+
+    fs.unlinkSync(`./public/users/${user}/photo/${id}`)
+
+    res.json({error:false, id});
 })
 
 io.on('connection', socket => {
