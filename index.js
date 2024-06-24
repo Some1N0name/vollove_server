@@ -166,7 +166,7 @@ app.post('/startReg', async (req, res) => {
         if(password.length < 5) return res.json({ error: true, message: 'Пароль должен быть длиннее 4 символов' });
         if(password.length > 20) return res.json({ error: true, message: 'Пароль не может быть длиннее 20 символов' });
         if(password != ppassword) return res.json({ error: true, message: 'Пароли не совпадают' });
-
+        if(!validateEmail(Email)) return res.json({ error: true, message: 'Неверный формат почты' });
         const candidate = await User.findOne({email: Email});
         if(candidate) return res.json({ error: true, message: 'Пользователь с такой почтой уже существует' });
 
@@ -497,4 +497,15 @@ io.on('connection', socket => {
 async function formChat(chat, id) {
     const user = await User.findOne({ $and: [{ _id: { $in: chat.contact } }, { _id: { $ne: id } }] }, { password: 0, requests: 0 });
     return { _id: chat.id, avatar: `/users/${user._id}/avatar/${user.avatar}.png`, name: user.name, lastActive: user.lastActive, online: user.online };
+}
+
+function validateEmail(email){
+    try{
+        const regex = /^[a-zA-Z0-9.!#$%&'*+/-?^_`{|}~-]+@[a-zA-Z0-9-]+(?:\.[a-zA-Z0-9-]+)*$/;
+        if(email.match(regex)) return true;
+        else return false
+    }
+    catch(e){
+        return false
+    }
 }
